@@ -1,140 +1,170 @@
-<h2 mat-dialog-title><span fxFlex>Create a new workspace</span></h2>
-<mat-dialog-content>
+<div class="new-workspace-container">
+  <!-- SUMMARY -->
+  <div class="selected-workspace-template">
+    <ng-container
+      *ngIf="selectedTemplate as template; else noWorkspaceSelected"
+    >
+      <div fxFlex fxLayout="row" fxLayoutAlign="center center">
+        <div class="template-image">
+          <img src="assets/{{ images[template.schematicSet] }}" />
+        </div>
+        <div class="card-content">
+          <h3 class="template-title">{{ template.name }}</h3>
+          <span>{{ template.schematicSet }}</span>
+        </div>
+      </div>
+    </ng-container>
+    <ng-template #noWorkspaceSelected>
+      <div class="no-workspace-selected">
+        No workspace template selected
+      </div></ng-template
+    >
+  </div>
+
   <div *ngIf="commandOutput$" class="ui-terminal-container">
     <ui-terminal
       [command]="command"
       [outChunk]="(commandOutput$ | async)?.outChunk"
     ></ui-terminal>
   </div>
-  <form [formGroup]="ngNewForm" *ngIf="!commandOutput$">
-    <mat-vertical-stepper
-      [linear]="true"
-      #stepper
-      (animationDone)="autofocusInput()"
-    >
-      <mat-step
-        [stepControl]="control"
-        *ngIf="ngNewForm.get('path') as control"
-        [completed]="true"
-      >
-        <ng-template matStepLabel>Select a parent directory</ng-template>
-        <div>
-          <mat-form-field
-            (click)="selectParentDirectory()"
-            readonly="true"
-            autofilled
-            class="path-form-field"
-            fxFlex
-            appearance="outline"
-          >
-            <mat-label>Parent directory</mat-label>
-            <input
-              class="autofocus"
-              readonly="true"
-              matInput
-              [formControl]="control"
-              name="parent-directory"
-            />
-            <mat-icon matSuffix>folder</mat-icon>
-            <mat-hint *ngIf="control.value">
-              Choose a different directory by clicking above
-            </mat-hint>
-          </mat-form-field>
-        </div>
-      </mat-step>
-      <mat-step
-        *ngIf="ngNewForm.get('name') as control"
-        [stepControl]="control"
-      >
-        <ng-template matStepLabel
-          ><span class="js-step-name-workspace"
-            >Name your new workspace</span
-          ></ng-template
-        >
-        <div>
-          <mat-form-field
-            class="workspace-name-form-field"
-            fxFlex
-            appearance="outline"
-          >
-            <mat-label>Workspace Name</mat-label>
-            <input
-              class="autofocus"
-              (keydown.enter)="stepper.next()"
-              #workspaceNameInput
-              matInput
-              placeholder="my-new-workspace"
-              [formControl]="control"
-              name="value"
-            />
-            <mat-error *ngIf="control.invalid && control.errors.nameTaken">
-              {{ ngNewForm.value.path + '/' + control.value | normalizePath }}
-              already exists
-            </mat-error>
-            <mat-icon matSuffix>create_new_folder</mat-icon>
-            <mat-hint *ngIf="control.value">
-              Workspace path will be
-              {{ ngNewForm.value.path + '/' + control.value | normalizePath }}
-            </mat-hint>
-          </mat-form-field>
-        </div>
-      </mat-step>
-      <mat-step
-        *ngIf="ngNewForm.get('collection') as control"
-        [stepControl]="control"
-      >
-        <ng-template matStepLabel
-          ><span class="js-step-choose-schematic"
-            >Choose a schematic set</span
-          ></ng-template
-        >
-        <div>
-          <mat-selection-list
-            (selectionChange)="handleSelection($event)"
-            class="js-select-schematic"
-          >
-            <mat-list-option
-              [class.autofocus]="first"
-              [value]="n"
-              [class.selected-schematic]="control.value?.name === n.name"
-              *ngFor="
-                let n of (schematicCollectionsForNgNew$ | async);
-                let first = first;
-                trackBy: trackByName
-              "
-            >
-              <h4 mat-line>{{ n.name }}</h4>
-              <p mat-line>{{ n.description }}</p>
-            </mat-list-option>
-          </mat-selection-list>
-        </div>
-      </mat-step>
-      <mat-step
-        [optional]="true"
-        [stepControl]="ngNewForm.get('collectionOptions')"
-        fxFlex
-      >
-        <ng-template matStepLabel>Set schematic options</ng-template>
 
-        <div class="last-option" fxLayout="row" fxLayout="end end" fxFlex>
-          <ui-schematic-field
-            *ngFor="let field of ngNewForm.get('collection')?.value?.schema"
-            [field]="field"
-            [formGroup]="ngNewForm.get('collectionOptions')"
-          ></ui-schematic-field>
+  <form [formGroup]="ngNewForm" *ngIf="!commandOutput$">
+    <mat-horizontal-stepper linear labelPosition="bottom" #stepper>
+      <mat-step>
+        <ng-template matStepLabel>Workspace template</ng-template>
+        <!-- TEMPLATES -->
+        <h2>Choose a workspace template</h2>
+        <div *ngIf="ngNewForm.get('collection') as control" fxLayout="column">
+          <div
+            *ngFor="let template of (templates$ | async)"
+            class="template-card selectable"
+            (click)="selectTemplate(template)"
+          >
+            <div class="template-image">
+              <img src="assets/{{ images[template.schematicSet] }}" />
+            </div>
+            <div class="card-content">
+              <h3 class="template-title">{{ template.name }}</h3>
+              <span>{{ template.schematicSet }}</span>
+            </div>
+          </div>
         </div>
       </mat-step>
-    </mat-vertical-stepper>
+
+      <mat-step>
+        <ng-template matStepLabel>Workspace options</ng-template>
+        <!-- STEP 2: customize workspace -->
+        <ng-container *ngIf="selectedTemplate as template">
+          <div
+            class="template-customization"
+            fxLayout="row"
+            fxLayoutAlign="start start"
+          >
+            <div class="customization-menu-container">
+              <ul>
+                <li
+                  *ngFor="
+                    let field of ngNewForm.get('collection')?.value?.schema
+                  "
+                >
+                  {{ field.name }}
+                </li>
+              </ul>
+            </div>
+            <div class="customization-fields-container">
+              <div fxLayout="column">
+                <div
+                  *ngFor="
+                    let field of ngNewForm.get('collection')?.value?.schema
+                  "
+                  class="workspace-param-field"
+                >
+                  <ui-schematic-field
+                    [field]="field"
+                    [formGroup]="ngNewForm.get('collectionOptions')"
+                  ></ui-schematic-field>
+                </div>
+                <div class="next-step-container">
+                  <button
+                    mat-raised-button
+                    (click)="stepper.next(); configurationCompleted = true"
+                    color="primary"
+                  >
+                    Choose workspace name and location
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </mat-step>
+
+      <mat-step>
+        <ng-template matStepLabel>Name & location</ng-template>
+        <div *ngIf="configurationCompleted" fxLayout="column">
+          <p>Select a parent directory</p>
+          <div *ngIf="ngNewForm.get('path') as control">
+            <mat-form-field
+              (click)="selectParentDirectory()"
+              readonly="true"
+              autofilled
+              class="path-form-field"
+              fxFlex
+              appearance="outline"
+            >
+              <mat-label>Parent directory</mat-label>
+              <input
+                readonly="true"
+                matInput
+                [formControl]="control"
+                name="parent-directory"
+              />
+              <mat-icon matSuffix>folder</mat-icon>
+              <mat-hint *ngIf="control.value">
+                Choose a different directory by clicking above
+              </mat-hint>
+            </mat-form-field>
+          </div>
+
+          <p>Name your new workspace</p>
+          <div *ngIf="ngNewForm.get('name') as control">
+            <mat-form-field
+              class="workspace-name-form-field"
+              fxFlex
+              appearance="outline"
+            >
+              <mat-label>Workspace Name</mat-label>
+              <input
+                #workspaceNameInput
+                matInput
+                placeholder="my-new-workspace"
+                [formControl]="control"
+                name="value"
+              />
+              <mat-error *ngIf="control.invalid && control.errors.nameTaken">
+                {{ ngNewForm.value.path + '/' + control.value | normalizePath }}
+                already exists
+              </mat-error>
+              <mat-icon matSuffix>create_new_folder</mat-icon>
+              <mat-hint *ngIf="control.value">
+                Workspace path will be
+                {{ ngNewForm.value.path + '/' + control.value | normalizePath }}
+              </mat-hint>
+            </mat-form-field>
+          </div>
+
+          <button
+            (click)="createNewWorkspace()"
+            mat-raised-button
+            color="accent"
+            [disabled]="!ngNewForm.valid || commandOutput$"
+          >
+            Create workspace
+          </button>
+        </div>
+      </mat-step>
+    </mat-horizontal-stepper>
+
+    <!-- <pre>{{ ngNewForm.value | json }}</pre> -->
   </form>
-</mat-dialog-content>
-<mat-dialog-actions fxLayout="row" fxLayoutAlign="end end">
-  <button mat-button mat-dialog-close>Close</button>
-  <button
-    (click)="createNewWorkspace()"
-    mat-raised-button
-    color="accent"
-    [disabled]="!ngNewForm.valid || commandOutput$"
-  >
-    Create
-  </button>
-</mat-dialog-actions>
+</div>

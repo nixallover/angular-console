@@ -1,22 +1,26 @@
 angular-console-new-workspace {
-  .mat-vertical-content {
-    padding-bottom: 0 !important;
+  @mixin dev-border {
+    //border: dotted 1px #ddd;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .mat-horizontal-content-container {
+    overflow: visible;
+  }
+
+  .new-workspace-container {
+    max-width: 840px;
+    padding: 0 1rem;
+    position: relative;
+    margin: 2rem auto;
   }
 
   .path-form-field,
   .path-form-field input {
     cursor: pointer;
-  }
-
-  $selectedBackgroundColor: #dcdcdc;
-
-  .selected-schematic {
-    background: $selectedBackgroundColor !important;
-  }
-
-  mat-selection-list {
-    padding-top: 0 !important;
-    padding-bottom: 28px;
   }
 
   .ui-terminal-container {
@@ -33,5 +37,112 @@ angular-console-new-workspace {
       display: block;
       box-sizing: border-box;
     }
+  }
+
+  $width-card-gutter: 1rem;
+
+  .template-card {
+    @include dev-border;
+    align-items: center;
+    border-radius: 0.25rem;
+    color: #444;
+    display: flex;
+    margin: 0 $width-card-gutter $width-card-gutter 0;
+    min-height: 100px;
+    padding: 1.5rem;
+    white-space: normal;
+
+    &.selectable {
+      cursor: pointer;
+      transition: all 0.3s;
+
+      &:hover,
+      &:focus {
+        background-color: rgba(0, 0, 0, 0.04);
+        outline: none;
+      }
+
+      &.selected {
+        border-color: rgb(25, 118, 210);
+        border-width: 2px;
+        color: #111;
+        transform: scale(1.05);
+      }
+    }
+
+    a {
+      color: rgb(25, 118, 210);
+    }
+  }
+
+  h3.template-title {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  /* workspace template image */
+  $width-template-image: 70px;
+  .template-image {
+    max-height: $width-template-image;
+    margin-right: 2rem;
+    max-width: $width-template-image;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    img {
+      max-height: 100%;
+      width: auto;
+      max-width: 100%;
+    }
+  }
+
+  mat-form-field {
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+
+  /* summary at the top */
+  .selected-workspace-template {
+    @include dev-border;
+    display: flex;
+    padding: 2rem;
+    justify-content: center;
+  }
+
+  .workspace-param-field {
+    margin-bottom: 1.5rem;
+  }
+
+  .customization-menu-container {
+    position: sticky;
+    margin-top: 2rem;
+    top: 2rem;
+    flex-grow: 1;
+
+    ul {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+
+      li {
+        margin-bottom: 1rem;
+      }
+    }
+  }
+
+  .customization-fields-container {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    width: 70%;
+
+    h3 {
+      margin-top: 2rem;
+    }
+  }
+
+  .no-workspace-selected {
+    color: rgba(0, 0, 0, 0.54);
+    font-style: italic;
   }
 }

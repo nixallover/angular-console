@@ -12,9 +12,7 @@ import {
   trigger
 } from '@angular/animations';
 import { Component, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { MatDialog } from '@angular/material';
 import { ContextualActionBarService } from '@nrwl/angular-console-enterprise-frontend';
-import { NewWorkspaceComponent } from '../new-workspace/new-workspace.component';
 import { WorkspacesService } from '../workspaces.service';
 import { shareReplay } from 'rxjs/operators';
 
@@ -40,7 +38,6 @@ export class WorkspacesComponent implements OnInit {
     readonly settings: Settings,
     readonly workspacesService: WorkspacesService,
     private readonly contextualActionBarService: ContextualActionBarService,
-    private readonly matDialog: MatDialog,
     private readonly commandRunner: CommandRunner
   ) {}
 
@@ -66,15 +63,6 @@ export class WorkspacesComponent implements OnInit {
       if (result && result.selectedDirectoryPath) {
         this.workspacesService.openWorkspace(result.selectedDirectoryPath);
       }
-    });
-  }
-
-  createNewWorkspace() {
-    this.matDialog.open(NewWorkspaceComponent, {
-      disableClose: true,
-      width: '760px',
-      panelClass: 'new-workspace-dialog',
-      autoFocus: false
     });
   }
 }

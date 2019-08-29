@@ -10,10 +10,10 @@ import {
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   ViewChild,
   ViewEncapsulation,
-  OnInit
+  OnInit,
+  OnDestroy
 } from '@angular/core';
 import {
   AbstractControl,
@@ -23,20 +23,18 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import {
-  MatDialogRef,
-  MatSelectionListChange,
-  MatVerticalStepper
-} from '@angular/material';
-import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import { MatHorizontalStepper } from '@angular/material';
+import { Router, NavigationEnd } from '@angular/router';
+import { BehaviorSubject, Observable, of, Subject, combineLatest } from 'rxjs';
 import {
   map,
   publishReplay,
   refCount,
   switchMap,
   take,
-  tap
+  tap,
+  filter,
+  takeUntil
 } from 'rxjs/operators';
 
 import {
@@ -46,11 +44,23 @@ import {
   SchematicCollectionsGQL
 } from '../generated/graphql';
 import { WorkspacesService } from '../workspaces.service';
+import { ContextualActionBarService } from '@nrwl/angular-console-enterprise-frontend';
+import { WorkspaceTemplate, WORKSPACE_TEMPLATES } from './workspace-templates';
 
 interface SchematicCollectionForNgNew {
   name: string;
   description: string;
 }
+
+/**
+ * Update notes:
+ * Add autofocus back
+ * Vertical stepper (instead of doing it manually)
+ * Move workspace templates to the backend
+ * Get the actual template data
+ * Automatically track
+ *
+ */
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,10 +69,20 @@ interface SchematicCollectionForNgNew {
   templateUrl: './new-workspace.component.html',
   styleUrls: ['./new-workspace.component.scss']
 })
-export class NewWorkspaceComponent implements OnInit {
-  @ViewChild(MatVerticalStepper, { static: false })
-  verticalStepper: MatVerticalStepper;
+export class NewWorkspaceComponent implements OnInit, OnDestroy {
+  @ViewChild(MatHorizontalStepper, { static: false })
+  stepper: MatHorizontalStepper;
+
+  destroyed$ = new Subject();
+
+  templates: WorkspaceTemplate[] = WORKSPACE_TEMPLATES;
   commandOutput$?: Observable<IncrementalCommandOutput>;
+  selectedTemplate: WorkspaceTemplate | null;
+  images = {
+    '@schematics/angular': 'angular-logo.png',
+    '@nrwl/workspace': 'nx-logo.png'
+  };
+  configurationCompleted = false;
 
   command?: string;
 
@@ -89,44 +109,66 @@ export class NewWorkspaceComponent implements OnInit {
     refCount()
   );
 
-  autofocusInput() {
-    const autofocus = (this.elementRef
-      .nativeElement as HTMLElement).querySelectorAll('.autofocus')[
-      this.verticalStepper.selectedIndex
-    ] as any;
+  templates$ = combineLatest([
+    this.schematicCollectionsForNgNew$,
+    of(this.templates)
+  ]).pipe(
+    map(([schematicCollections, templates]) => {
+      return templates.map(t => ({
+        ...t,
+        schematic: schematicCollections.find(s => s.name === t.schematicSet)
+      }));
+    })
+  );
 
-    if (autofocus && autofocus.focus) {
-      autofocus.focus();
-    }
-  }
+  // autofocusInput() {
+  //   const autofocus = (this.elementRef
+  //     .nativeElement as HTMLElement).querySelectorAll('.autofocus')[
+  //     this.verticalStepper.selectedIndex
+  //   ] as any;
+
+  //   if (autofocus && autofocus.focus) {
+  //     autofocus.focus();
+  //   }
+  // }
 
   constructor(
     private readonly telemetry: Telemetry,
-    private readonly elementRef: ElementRef,
+    // private readonly elementRef: ElementRef,
     private readonly router: Router,
-    private readonly dialogRef: MatDialogRef<NewWorkspaceComponent>,
     private readonly fb: FormBuilder,
     private readonly schematicCollectionsGQL: SchematicCollectionsGQL,
     private readonly workspacesService: WorkspacesService,
+    private readonly contextualActionBarService: ContextualActionBarService,
     private readonly ngNewGQL: NgNewGQL,
     private readonly serializer: Serializer,
     private readonly commandRunner: CommandRunner
-  ) {}
+  ) {
+    router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntil(this.destroyed$)
+      )
+      .subscribe(e => {
+        if (e.urlAfterRedirects === '/create-workspace') {
+          this.contextualActionBarService.breadcrumbs$.next([
+            { title: 'Create a workspace' }
+          ]);
+        }
+      });
+  }
 
   ngOnInit() {
     this.telemetry.screenViewed('New Workspace');
   }
 
-  handleSelection(event: MatSelectionListChange) {
-    // Workaround for https://github.com/angular/material2/issues/7157
-    if (event.option.selected) {
-      event.source.deselectAll();
-      event.option._setSelected(true);
-
-      this.ngNewForm.controls.collection.setValue(event.option.value);
+  selectTemplate(template?: WorkspaceTemplate) {
+    if (template) {
+      this.selectedTemplate = template;
+      this.ngNewForm.controls.collection.setValue(template.schematic);
 
       const value: SchematicCollections.SchematicCollections | null =
-        event.option.value;
+        template.schematic;
       this.ngNewForm.removeControl('collectionOptions');
 
       if (value && value.schema) {
@@ -137,10 +179,17 @@ export class NewWorkspaceComponent implements OnInit {
 
         this.ngNewForm.addControl('collectionOptions', formGroup);
       }
+
+      this.stepper.next();
     } else {
+      this.selectedTemplate = null;
       this.ngNewForm.controls.collection.setValue(null);
       this.ngNewForm.removeControl('collectionOptions');
     }
+  }
+
+  unselectTemplate() {
+    this.selectTemplate(undefined);
   }
 
   selectParentDirectory() {
@@ -149,7 +198,6 @@ export class NewWorkspaceComponent implements OnInit {
       .subscribe(result => {
         if (result && result.selectedDirectoryPath) {
           this.ngNewForm.controls.path.setValue(result.selectedDirectoryPath);
-          this.verticalStepper.next();
         }
       });
   }
@@ -180,7 +228,7 @@ export class NewWorkspaceComponent implements OnInit {
         .pipe(
           tap(command => {
             if (command.status === CommandStatus.SUCCESSFUL) {
-              this.dialogRef.close();
+              // this.dialogRef.close();
               this.router.navigate([
                 '/workspace',
                 `${ngNewInvocation.path}/${ngNewInvocation.name}`,
@@ -194,6 +242,11 @@ export class NewWorkspaceComponent implements OnInit {
 
   trackByName(_: number, collection: SchematicCollectionForNgNew) {
     return collection.name;
+  }
+
+  ngOnDestroy() {
+    this.destroyed$.next();
+    this.destroyed$.complete();
   }
 }
 

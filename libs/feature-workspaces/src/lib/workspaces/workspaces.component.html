@@ -80,18 +80,18 @@
     >
       <mat-icon>folder_open</mat-icon>
     </button>
-    <button
+    <a
       mat-fab
       color="accent"
       class="add-workspace-fab"
       matTooltipClass="add-workspace-tooltip"
       matTooltip="Create a new workspace"
       matTooltipPosition="left"
-      (click)="createNewWorkspace()"
+      routerLink="../create-workspace"
     >
       <mat-icon class="create-icon">create_new_folder</mat-icon>
       <mat-icon class="add-icon">add</mat-icon>
-    </button>
+    </a>
   </div>
 </ng-container>
 

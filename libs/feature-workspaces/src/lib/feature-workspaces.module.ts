@@ -115,7 +115,6 @@ export const workspaceRoutes: Route[] = [
     WorkspaceComponent,
     WorkspacesComponent,
     FilterMenuComponent
-  ],
-  entryComponents: [NewWorkspaceComponent]
+  ]
 })
 export class FeatureWorkspacesModule {}
