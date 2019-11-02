@@ -477,6 +477,14 @@
             "tsConfig": ["libs/vscode-ui/components/tsconfig.lib.json"],
             "exclude": ["**/node_modules/**", "!libs/vscode-ui/components/**"]
           }
+        },
+        "test": {
+          "builder": "@nrwl/jest:jest",
+          "options": {
+            "jestConfig": "libs/vscode-ui/components/jest.config.js",
+            "tsConfig": "libs/vscode-ui/components/tsconfig.spec.json",
+            "setupFile": "libs/vscode-ui/components/src/test-setup.ts"
+          }
         }
       },
       "schematics": {
